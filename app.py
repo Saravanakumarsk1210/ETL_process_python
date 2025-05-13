@@ -14,16 +14,16 @@ import base64
 
 
 
-st.set_page_config(layout="wide")
-
+st.set_page_config(layout="wide")# Set page configurationst.title("  ")
 st.title(" ")
 st.title(":hospital: Hospital Data Analysis")
 st.markdown('<style>div.block-container{padding-top:1rem;}</style>', unsafe_allow_html=True)
 
-# toggle session state
+# Initialize toggle state in session state
 if 'mode' not in st.session_state:
     st.session_state.mode = "Table"  
 
+# Create toggle buttons
 col1, col2 ,col3= st.sidebar.columns(3)
 if col1.button("Table Mode"):
     st.session_state.mode = "Table"
@@ -32,17 +32,17 @@ if col2.button("Dash board"):
 if col3.button("Patients"):
     st.session_state.mode = "Patients"
 
-#  database connection
+# Function to establish database connection
 def get_db_connection():
     conn = psycopg2.connect(
-        dbname="newdb",
+        dbname="appdb",
         user="postgres",
         password="2003",
         host="localhost",
         port="5432"
     )
     return conn
-#  table relationships
+# Function to retrieve table relationships
 def get_table_relationships(conn):
     query = """
     SELECT
@@ -63,7 +63,7 @@ def get_table_relationships(conn):
     relationships = pd.read_sql(query, conn)
     return relationships
 
-# primary keys
+# Function to retrieve primary keys
 def get_primary_keys(conn):
     query = """
     SELECT
@@ -79,7 +79,7 @@ def get_primary_keys(conn):
     primary_keys = pd.read_sql(query, conn)
     return primary_keys
 
-#  find related tables
+# Function to find related tables
 def find_related_tables(start_table, relationships, visited=None):
     if visited is None:
         visited = set()
@@ -113,7 +113,7 @@ def trim_whitespace(data):
     return data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 
-# enhance patient data
+# Function to enhance patient data
 def enhance_patient_data(patient_data):
     if 'dob' in patient_data.columns:
         current_date = datetime.now()
@@ -141,11 +141,12 @@ def enhance_patient_data(patient_data):
     return patient_data
 
 
-#  merge tables
+# Function to merge tables
 def merge_tables(tables, relationships):
     merged_table = None
     merge_order = []
 
+    # Ensure patients table is first
     if 'patients' in tables:
         merged_table = tables['patients']
         merge_order.append('patients')
@@ -167,6 +168,7 @@ def merge_tables(tables, relationships):
                 )
             merge_order.append(table_name)
 
+    # Handle tables without patientid using relationships
     for table_name, table_data in tables.items():
         if table_name == 'patients' or 'patientid' in table_data.columns:
             continue
@@ -508,11 +510,13 @@ def show_patient_dash(merged_table):
         patient_data = merged_table[merged_table['patientid'] == entered_patient_id]
       
         
+        # Add this new section
         appointment_count = count_appointments(patient_data)
     
         st.subheader(f"Total No of Visits :{appointment_count}")
         
-    
+        # Add this code just before the "Detailed Medical Data" section
+                # Function to determine patient type
         def determine_patient_type(patient_data, patient_id):
             # Filter data for the specific patient
             patient_history = patient_data[patient_data['patientid'] == patient_id]
@@ -529,6 +533,7 @@ def show_patient_dash(merged_table):
         # Set button color based on patient type
         button_color = "red" if patient_type == "INPATIENT" else "green"
 
+        # CSS for the button
         button_style = f"""
             <style>
             .patient-type-button {{
@@ -546,11 +551,12 @@ def show_patient_dash(merged_table):
             </style>
         """
 
+        # Display the button
         st.markdown(button_style, unsafe_allow_html=True)
         st.markdown(f'<div class="patient-type-button">{patient_type}</div>', unsafe_allow_html=True)
 
 
-######################################################################################################################################################
+######################################################################################################################
         st.title("Medical Data")
         st.markdown("##### (This below indications denotes comparision of last two dates)")
 
@@ -615,6 +621,7 @@ def show_patient_dash(merged_table):
     'righteye_iop', 'lefteye_iop',
     'blood_pressure','treatmentname', 'treatment_description' ,
     'medications', 'nextvisitdate', 'scanstobetaken'
+     # Add these two new columns
 ]]
 
             # Remove duplicate rows and sort
@@ -662,7 +669,7 @@ def show_patient_dash(merged_table):
         detailed_data_sorted = detailed_data_sorted.rename(columns=column_rename)
 
 
-        # Transpose the dataframe
+                # Transpose the dataframe
         transposed_data = detailed_data_sorted.T
 
         # Use the 'Diagnosis Date' row as the new column headers
@@ -671,7 +678,8 @@ def show_patient_dash(merged_table):
         # Remove the 'Diagnosis Date' row as it's now the header
         transposed_data = transposed_data.drop('Diagnosis Date')
 
-              
+                # Convert the transposed dataframe to HTML
+            # Convert the transposed dataframe to HTML
         html = transposed_data.to_html(classes='dataframe', escape=False)
 
         # Add custom CSS for auto-fitting columns, rows, and improving readability
@@ -711,7 +719,7 @@ def show_patient_dash(merged_table):
         </style>
         """, unsafe_allow_html=True)
 
-        
+        # Wrap the table in a div for horizontal scrolling
         st.markdown('<div class="table-container">', unsafe_allow_html=True)
         st.write(html, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -736,8 +744,9 @@ def show_patient_dash(merged_table):
                     numerator, denominator = map(int, snellen.split('/'))
                     return denominator  # Use the denominator for sorting and plotting
                 except ValueError:
-                    return None  
+                    return None  # Return None for invalid or unrecognized values
 
+            # Apply the conversion function
             y_values = [snellen_to_numeric(value) for value in data[y_column]]
 
             # Filter out None values
@@ -789,7 +798,7 @@ def show_patient_dash(merged_table):
     
     def create_interactive_line_chart(data, x_column, y_columns, title):
         fig = go.Figure()
-        colors = {'RE': 'orange', 'LE': 'blue'}  
+        colors = {'RE': 'orange', 'LE': 'blue'}  # Define colors for right and left eye
         for y_column, name in y_columns:
             color = colors.get(name.split()[0], 'gray')  # Default to gray if not RE or LE
             fig.add_trace(go.Scatter(x=data[x_column], y=data[y_column], mode='lines+markers', name=name, line=dict(color=color)))
@@ -952,7 +961,10 @@ def show_patient_dash(merged_table):
         else:
             return '#8A2BE2'  # Purple
 
+    # Custom CSS for styling
+    # Custom CSS for styling
 
+    
     st.markdown("""
 <style>
 .inpatient-container {
@@ -1017,9 +1029,14 @@ def show_patient_dash(merged_table):
             operated_eye = row['operatedeye'] if pd.notna(row['operatedeye']) else "N/A"
             treatment = row['treatmentname'] if pd.notna(row['treatmentname']) else "N/A"
             description = row['treatment_description'] if pd.notna(row['treatment_description']) else "N/A"
-
-            left_image_path = r"E:\AUROITECH INTERN\right eye.jpg"
-            right_image_path = r"E:\AUROITECH INTERN\left eye.jpg"
+# Choose the appropriate image based on the operated eye
+            # Choose the appropriate image based on the operated eye
+            # Choose the appropriate image based on the operated eye
+            # Prepare image paths
+                        # Determine which eye is operated and get the appropriate image path
+            # Determine which eye(s) to display
+            left_image_path = r"E:\AUROITECH INTERN\BEFORE REALTIME DB\solutions\code and data\left eye.jpg"
+            right_image_path = r"E:\AUROITECH INTERN\BEFORE REALTIME DB\solutions\code and data\right eye.jpg"
 
             # Function to get base64 encoded image
             def get_image_base64(image_path):
@@ -1065,8 +1082,8 @@ def show_patient_dash(merged_table):
         
             comparison_data = {
                 'Medical Data': [],
-                'Pre-op': [], 
-                'Post-op': []  
+                'Pre-op': [],  # Change this line
+                'Post-op': []  # Change this line
             }
 
             for metric in metrics:
@@ -1080,6 +1097,7 @@ def show_patient_dash(merged_table):
                     pre_op = row['lefteye_snellenchartresult']
                     improvement = compare_snellen(post_op, pre_op)
                     comparison_data['Medical Data'].append(f"{metric}{improvement}")
+                # ... (rest of the code remains the same)
                 elif metric == 'RE IOP':
                     post_op = row['postop_righteye_iop']
                     pre_op = row['righteye_iop']
@@ -1114,11 +1132,12 @@ def show_patient_dash(merged_table):
                     arrow = get_arrow(post_op, pre_op, 'Blood Pressure')
                     comparison_data['Medical Data'].append(f"{metric} {arrow}")
                 
-                comparison_data['Pre-op'].append(pre_op)  
-                comparison_data['Post-op'].append(post_op)  
-                comparison_df = pd.DataFrame(comparison_data)
+                comparison_data['Pre-op'].append(pre_op)  # Change this line
+                comparison_data['Post-op'].append(post_op)  # Change this line
+            comparison_df = pd.DataFrame(comparison_data)
             
 
+            # Display the table with the custom CSS class
             st.write(comparison_df.to_html(classes='dataframe-comparison', escape=False, index=False), unsafe_allow_html=True)
             
             st.markdown("---")
@@ -1129,9 +1148,16 @@ def show_patient_dash(merged_table):
     # Main function
 def main():
     if st.session_state.mode == "Table":
+        # Database connection
         conn = get_db_connection()
+
+        # Get table names and relationships
         relationships = get_table_relationships(conn)
+
+        # Get primary keys
         primary_keys = get_primary_keys(conn)
+
+        # Find all related tables to 'patients'
         related_tables = find_related_tables('patients', relationships)
 
         if not related_tables:
@@ -1139,12 +1165,16 @@ def main():
             conn.close()
             return
 
+        # Load tables data
         tables = {table_name: get_table_data(conn, table_name) for table_name in related_tables}
+
+        # Enhance patient data with age and unit
         if 'patients' in tables:
             tables['patients'] = enhance_patient_data(tables['patients'])
         else:
             st.error("Patients table is missing. Cannot enhance patient data.")
 
+        # Merge tables and get merge order
         merged_table, merge_order = merge_tables(tables, relationships)
         merged_table  = trim_whitespace(merged_table)
 
@@ -1155,6 +1185,7 @@ def main():
             conn.close()
             return
 
+        # Sidebar for column selection
         st.sidebar.header("Select Data")
         selected_columns = []
 
@@ -1166,10 +1197,13 @@ def main():
                     st.sidebar.subheader(f"{table_name} Details")
                     selected_columns.extend(st.sidebar.multiselect(f"Columns from {table_name}", filtered_columns))
 
+        # Sidebar for filters
         st.sidebar.header("Filters")
 
+        # Dictionary to store filter values
         filters = {}
 
+        # Handle categorical filters
         categorical_columns = ['gender', 'unit', 'city', 'status', 'treatmentname', 'departmentname']  # Specify your categorical columns here
         for column in categorical_columns:
             if column in merged_table.columns:
@@ -1177,6 +1211,7 @@ def main():
                 if filter_options:
                     filters[column] = filter_options
 
+        # Display selected columns from merged table
         if st.sidebar.button("Display Selected Columns"):
             if not selected_columns:
                 st.sidebar.warning("Please select at least one column.")
@@ -1190,6 +1225,7 @@ def main():
                 st.write("Merged Table based on selected columns and filters (duplicates removed):")
                 st.write(filtered_table_no_duplicates)
 
+        # Save merged table to session state for visualization mode
         st.session_state.merged_table = merged_table
 
         conn.close()
