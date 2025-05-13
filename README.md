@@ -11,7 +11,7 @@ Download `app.py`, the SQL file, and images into a single directory.
 
 ### 2. Set Up Database
 1. Create a new database in PostgreSQL.
-2. Copy the queries from the SQL file and execute them to set up the database tables.
+2. Copy the queries from the SQL file or db.txt and execute them to set up the database tables.
 
 ### 3. Update `app.py`
 1. Change the database connection parameters in `app.py` (around line 36):
